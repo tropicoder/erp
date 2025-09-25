@@ -1,0 +1,5 @@
+---
+description:  For each generated constant or function, add an explanatory comment in French. This comment must be in French and must explain the role of the constant or function.
+globs:
+alwaysApply: true
+---

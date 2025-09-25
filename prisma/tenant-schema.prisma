@@ -1,0 +1,204 @@
+// Tenant-specific database schema
+// This schema is used for each tenant's dedicated database
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/shared/generated/tenant-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("TENANT_DATABASE_URL")
+}
+
+// ============================================
+// TENANT DATABASE SCHEMA
+// ============================================
+
+// Role-based access control
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "create:invoice", "read:document"
+  description String?
+  resource    String   // e.g., "invoice", "document"
+  action      String   // e.g., "create", "read", "update", "delete"
+  createdAt   DateTime @default(now())
+
+  // Relations
+  roles RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+
+  // Relations
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// Group management with hierarchy support
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  parentId    String?  // Self-referencing for hierarchy
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  parent   Group?      @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children Group[]     @relation("GroupHierarchy")
+  users    UserGroup[]
+
+  @@map("groups")
+}
+
+model UserGroup {
+  id      String @id @default(cuid())
+  userId  String
+  groupId String
+
+  // Relations
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("user_groups")
+}
+
+// Billing and subscription management
+model Plan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("USD")
+  interval    String   // monthly, yearly
+  features    Json     // JSON object with plan features
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                String            @id @default(cuid())
+  planId            String
+  status            SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean           @default(false)
+  canceledAt        DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// API call logging for LLM usage tracking
+model ApiCallLog {
+  id          String   @id @default(cuid())
+  provider    String   // openai, anthropic, nexus
+  endpoint    String
+  tokensUsed  Int
+  cost        Decimal? @db.Decimal(10, 4)
+  responseTime Int     // in milliseconds
+  success     Boolean
+  errorMessage String?
+  createdAt   DateTime @default(now())
+
+  @@map("api_call_logs")
+}
+
+// Notification templates and history
+model NotificationTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String   // email, sms, push
+  subject     String?
+  body        String
+  variables   Json     // JSON object with template variables
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  notifications Notification[]
+
+  @@map("notification_templates")
+}
+
+model Notification {
+  id         String             @id @default(cuid())
+  templateId String
+  recipient  String             // email, phone, user ID
+  type       String             // email, sms, push
+  status     NotificationStatus @default(PENDING)
+  sentAt     DateTime?
+  errorMessage String?
+  metadata   Json?              // Additional data
+  createdAt  DateTime           @default(now())
+
+  // Relations
+  template NotificationTemplate @relation(fields: [templateId], references: [id])
+
+  @@map("notifications")
+}
+
+// Enums
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+  TRIALING
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}

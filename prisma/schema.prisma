@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MAIN DATABASE SCHEMA (Nexus Core)
+// ============================================
+
+// User model for authentication and basic profile
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hashed password
+  firstName String?
+  lastName  String?
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  projects     UserProject[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// Project/Tenant model for multi-tenancy
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // URL-friendly identifier
+  
+  // Database connection (encrypted)
+  dbConnectionString String
+  
+  // S3 configuration (encrypted)
+  s3Bucket    String
+  s3Endpoint  String
+  s3AccessKey String // Encrypted
+  s3SecretKey String // Encrypted
+  
+  // LLM configuration
+  llmProvider LlmProvider @default(NEXUS)
+  llmApiKey   String?     // Encrypted, optional for tenant-specific keys
+  
+  // Status and metadata
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users UserProject[]
+
+  @@map("projects")
+}
+
+// Many-to-many relationship between Users and Projects
+model UserProject {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  role      String   @default("member") // admin, member, viewer, public
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@map("user_projects")
+}
+
+// Refresh token for JWT authentication
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+// Enums
+enum LlmProvider {
+  NEXUS
+  OPENAI
+  ANTHROPIC
+  CUSTOM
+}
