@@ -187,6 +187,10 @@ export const EventNames = {
   SUBSCRIPTION_CREATED: 'subscription.created',
   SUBSCRIPTION_UPDATED: 'subscription.updated',
   PAYMENT_PROCESSED: 'payment.processed',
+  BILLING_INVOICE_GENERATED: 'billing.invoice.generated',
+  BILLING_PRORATED_INVOICE_GENERATED: 'billing.prorated.invoice.generated',
+  BILLING_APPLICATION_INVOICE_GENERATED: 'billing.application.invoice.generated',
+  BILLING_PROJECT_DEACTIVATED: 'billing.project.deactivated',
   
   // System events
   SYSTEM_STARTUP: 'system.startup',

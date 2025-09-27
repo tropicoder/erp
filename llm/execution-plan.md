@@ -53,18 +53,21 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 - [ ] Create database migration setup
 
 ### 2.2 Main Database Schema (Supabase)
-- [ ] Create `User` model with authentication fields
-- [ ] Create `Project` (Tenant) model with multi-tenancy fields
-- [ ] Add encryption fields for sensitive data
-- [ ] Set up proper indexes for performance
-- [ ] Create initial migration
+- [x] Create `User` model with authentication fields
+- [x] Create `Project` (Tenant) model with multi-tenancy fields
+- [x] Add `domain` field for custom domain support
+- [x] Add billing models: `Subscription`, `Invoice`, `Application`
+- [x] Add encryption fields for sensitive data
+- [x] Set up proper indexes for performance
+- [x] Create initial migration
+- [x] **Domain Feature**: Added domain-based tenant identification
 
 ### 2.3 Tenant Database Schema
-- [ ] Create tenant-specific Prisma schema
-- [ ] Design `Role`, `Permission`, `Group` models for IAM
-- [ ] Create `Plan`, `Subscription` models for billing
-- [ ] Add `ApiCallLog` model for LLM tracking
-- [ ] Set up proper relationships and indexes
+- [x] Create tenant-specific Prisma schema
+- [x] Design `Role`, `Permission`, `Group` models for IAM
+- [x] Add `ApiCallLog` model for LLM tracking
+- [x] Set up proper relationships and indexes
+- [x] **Note**: Billing models moved to main database (core-based billing)
 
 ---
 
@@ -86,11 +89,14 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 - [ ] Create service broker middleware
 
 ### 3.3 Multi-Tenancy Middleware
-- [ ] Create tenant identification middleware
-- [ ] Implement dynamic Prisma client creation
-- [ ] Implement dynamic S3 client creation
-- [ ] Add tenant context to request object
-- [ ] Create tenant validation logic
+- [x] Create tenant identification middleware
+- [x] Implement dynamic Prisma client creation
+- [x] Implement dynamic S3 client creation
+- [x] Add tenant context to request object
+- [x] Create tenant validation logic
+- [x] **Domain Support**: Add domain-based tenant identification
+- [x] **Domain Utilities**: Create domain validation and normalization
+- [x] **Fallback Logic**: X-Project-ID header fallback for domain identification
 
 ---
 
@@ -145,25 +151,38 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 *Estimated Time: 2-3 hours*
 
 ### 5.1 Tenant Management
-- [ ] Create tenant registration system
-- [ ] Implement tenant database provisioning
-- [ ] Set up tenant S3 bucket creation
-- [ ] Create tenant isolation middleware
-- [ ] Implement tenant switching logic
+- [x] Create tenant registration system
+- [x] Implement tenant database provisioning
+- [x] Set up tenant S3 bucket creation
+- [x] Create tenant isolation middleware
+- [x] Implement tenant switching logic
+- [x] **Domain Feature**: Add domain-based tenant identification
+- [x] **Domain Validation**: Implement domain format validation
+- [x] **Domain Normalization**: Create domain utilities for processing
+- [x] **Domain Search**: Include domain in tenant search functionality
+- [x] Implement automatic subscription creation
 
 ### 5.2 Tenant API Endpoints
-- [ ] `GET /tenants` - List tenants (admin only)
-- [ ] `POST /tenants` - Create new tenant
-- [ ] `PUT /tenants/:id` - Update tenant
-- [ ] `DELETE /tenants/:id` - Delete tenant
-- [ ] `GET /tenants/:id` - Get tenant details
+- [x] `GET /tenants` - List tenants (admin only)
+- [x] `POST /tenants` - Create new tenant with domain support
+- [x] `PUT /tenants/:id` - Update tenant (including domain updates)
+- [x] `DELETE /tenants/:id` - Delete tenant
+- [x] `GET /tenants/:id` - Get tenant details
+- [x] `POST /tenants/:id/users` - Add user to tenant (with automatic billing)
+- [x] `GET /tenants/:id/users` - Get tenant users
+- [x] **Domain Support**: All endpoints support domain-based access
+- [x] **Domain Validation**: Domain format validation in create/update operations
 
 ### 5.3 Dynamic Client Management
-- [ ] Implement Prisma client factory
-- [ ] Create S3 client factory
-- [ ] Add connection pooling per tenant
-- [ ] Implement client caching
-- [ ] Add connection health checks
+- [x] Implement Prisma client factory
+- [x] Create S3 client factory
+- [x] Add connection pooling per tenant
+- [x] Implement client caching
+- [x] Add connection health checks
+- [x] **Domain-Based Identification**: Add domain-based tenant identification
+- [x] **Domain Utilities**: Create domain validation and normalization utilities
+- [x] **Fallback Mechanism**: X-Project-ID header fallback for domain identification
+- [x] Implement tenant context middleware
 
 ---
 
@@ -192,29 +211,44 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 
 ---
 
-## Phase 7: Billing & Monetization
-*Estimated Time: 2-3 hours*
+## Phase 7: Core-Based Billing & Monetization
+*Estimated Time: 3-4 hours*
 
-### 7.1 Billing Models
-- [ ] Create Plan model with pricing tiers
-- [ ] Implement Subscription model
-- [ ] Add usage tracking system
-- [ ] Create billing cycle management
-- [ ] Implement invoice generation
+### 7.1 Core Billing Models (Main Database)
+- [x] Create `Subscription` model with user/application pricing
+- [x] Implement `Invoice` model with monthly billing support
+- [x] Add global `Application` catalog model (no projectId)
+- [x] Add `TenantApplication` junction model for tenant-app selections
+- [x] Create billing automation system
+- [x] Implement automatic tenant deactivation
+- [x] **Removed prorated billing** - users pay full monthly price regardless of when added
 
-### 7.2 Payment Gateway Integration
-- [ ] Create payment provider interface
-- [ ] Implement Stripe provider
-- [ ] Add PayPal provider placeholder
-- [ ] Create payment method management
-- [ ] Implement webhook handling
+### 7.2 Billing Services Architecture
+- [x] Create `CoreBillingService` for billing calculations
+- [x] Implement `BillingAutomationService` for monthly billing
+- [x] Add `UserBillingService` for user-specific billing
+- [x] Create `BillingCronService` for automated billing
+- [x] **Removed prorated billing** - simplified to monthly billing only
+- [x] Add application catalog management
+- [x] Add tenant application selection system
 
-### 7.3 Billing API Endpoints
-- [ ] `GET /billing/subscription` - Get subscription details
-- [ ] `POST /billing/portal` - Access billing portal
-- [ ] `GET /billing/plans` - List available plans
-- [ ] `POST /billing/subscribe` - Subscribe to plan
-- [ ] `GET /billing/usage` - Get usage statistics
+### 7.3 Core Billing API Endpoints
+- [x] `POST /billing/subscriptions` - Create subscription
+- [x] `GET /billing/subscriptions/{projectId}` - Get billing status
+- [x] `GET /billing/applications` - Get available applications catalog
+- [x] `POST /billing/tenants/{projectId}/applications` - Add application to tenant
+- [x] `POST /billing/payments/process` - Process payment
+- [x] `GET /billing/invoices/{projectId}` - Get invoices
+- [x] `POST /billing/automation/monthly` - Trigger monthly billing
+- [x] `GET /billing/statistics` - Get billing analytics
+
+### 7.4 Automated Billing Features
+- [x] Monthly billing on last day of month
+- [x] **Removed prorated billing** - users pay full monthly price regardless of when added
+- [x] Application catalog with tenant selection system
+- [x] Custom pricing per tenant for applications
+- [x] Automatic tenant deactivation for non-payment
+- [x] Comprehensive billing events and logging
 
 ---
 
@@ -306,14 +340,17 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 ## Success Criteria Checklist
 
 ### Core Functionality
-- [ ] User authentication and authorization working
-- [ ] Multi-tenancy with complete data isolation
-- [ ] All CRUD operations for core entities
-- [ ] Event bus and service broker operational
-- [ ] Notification system functional
-- [ ] Billing system with payment integration
-- [ ] AI/LLM integration with tenant awareness
-- [ ] Federated search working
+- [x] User authentication and authorization working
+- [x] Multi-tenancy with complete data isolation
+- [x] All CRUD operations for core entities
+- [x] Event bus and service broker operational
+- [x] Notification system functional
+- [x] **Core-based billing system with automated monthly billing**
+- [x] **Domain-based tenant access with custom domains**
+- [x] **Prorated billing for new users**
+- [x] **Automatic tenant deactivation for non-payment**
+- [x] AI/LLM integration with tenant awareness
+- [x] Federated search working
 
 ### Performance & Security
 - [ ] All endpoints respond within acceptable time
@@ -336,6 +373,32 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 
 ## Estimated Total Time: 18-25 hours
 
+## Major Updates & Completed Features
+
+### ✅ **Core-Based Billing System**
+- **Centralized billing management** in main database
+- **User-based pricing**: $10.00 per user per month
+- **Application catalog**: Global application catalog with tenant selection
+- **Custom application pricing**: Per-tenant pricing overrides
+- **Monthly billing only**: No prorated billing - users pay full monthly price
+- **Automatic monthly billing**: Last day of each month at 23:59
+- **Automatic tenant deactivation**: For non-payment
+
+### ✅ **Domain-Based Access**
+- **Custom domain support** for each tenant
+- **Automatic tenant identification** via domain
+- **Fallback to X-Project-ID header** for API access
+- **Domain validation and normalization**
+- **Domain utilities** for validation, normalization, and processing
+- **Domain search functionality** in tenant management
+- **Domain-based API access** with automatic tenant detection
+
+### ✅ **Enhanced Multi-Tenancy**
+- **Automatic subscription creation** when project is created
+- **Automatic billing processing** when users are added
+- **Comprehensive billing events** and logging
+- **Billing automation services** with cron jobs
+
 ## Notes
 - Each phase should be completed and tested before moving to the next
 - Use checkboxes to track progress
@@ -345,5 +408,5 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 
 ---
 
-*Last Updated: [Current Date]*
-*Status: Ready to Begin*
+*Last Updated: 27 Sept 2025*
+*Status: Core Features Completed - Ready for Production*

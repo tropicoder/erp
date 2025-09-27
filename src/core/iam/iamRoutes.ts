@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { authenticateToken } from '../../middleware/authMiddleware';
-import { requireTenant } from '../../middleware/tenantMiddleware';
+import { requireTenant, tenantMiddleware } from '../../middleware/tenantMiddleware';
 import { can } from './permissionMiddleware';
 import { getTenantPrisma } from '../../middleware/tenantMiddleware';
 import pino from 'pino';
@@ -61,7 +61,7 @@ const createGroupSchema = z.object({
  * GET /users
  * Get all users in the tenant
  */
-router.get('/users', authenticateToken, requireTenant, can('read:users'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/users', authenticateToken, tenantMiddleware, requireTenant, can('read:users'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
   const { page = 1, limit = 10, search } = req.query;
 
@@ -116,7 +116,7 @@ router.get('/users', authenticateToken, requireTenant, can('read:users'), asyncH
  * POST /users
  * Create a new user
  */
-router.post('/users', authenticateToken, requireTenant, can('create:users'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/users', authenticateToken, tenantMiddleware, requireTenant, can('create:users'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createUserSchema.parse(req.body);
   const { email, firstName, lastName, roleIds = [], groupIds = [] } = validatedData;
 
@@ -183,7 +183,7 @@ router.post('/users', authenticateToken, requireTenant, can('create:users'), asy
  * GET /users/:id
  * Get user by ID
  */
-router.get('/users/:id', authenticateToken, requireTenant, can('read:users'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/users/:id', authenticateToken, tenantMiddleware, requireTenant, can('read:users'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
   const { id } = req.params;
 
@@ -228,7 +228,7 @@ router.get('/users/:id', authenticateToken, requireTenant, can('read:users'), as
  * PUT /users/:id
  * Update user
  */
-router.put('/users/:id', authenticateToken, requireTenant, can('update:users'), asyncHandler(async (req: Request, res: Response) => {
+router.put('/users/:id', authenticateToken, tenantMiddleware, requireTenant, can('update:users'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = updateUserSchema.parse(req.body);
   const { id } = req.params;
   const { roleIds, groupIds, ...updateData } = validatedData;
@@ -296,7 +296,7 @@ router.put('/users/:id', authenticateToken, requireTenant, can('update:users'), 
  * DELETE /users/:id
  * Delete user
  */
-router.delete('/users/:id', authenticateToken, requireTenant, can('delete:users'), asyncHandler(async (req: Request, res: Response) => {
+router.delete('/users/:id', authenticateToken, tenantMiddleware, requireTenant, can('delete:users'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
   const { id } = req.params;
 
@@ -336,7 +336,7 @@ router.delete('/users/:id', authenticateToken, requireTenant, can('delete:users'
  * GET /roles
  * Get all roles
  */
-router.get('/roles', authenticateToken, requireTenant, can('read:roles'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/roles', authenticateToken, tenantMiddleware, requireTenant, can('read:roles'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
 
   const roles = await prisma.role.findMany({
@@ -372,7 +372,7 @@ router.get('/roles', authenticateToken, requireTenant, can('read:roles'), asyncH
  * POST /roles
  * Create a new role
  */
-router.post('/roles', authenticateToken, requireTenant, can('create:roles'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/roles', authenticateToken, tenantMiddleware, requireTenant, can('create:roles'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createRoleSchema.parse(req.body);
   const { name, description, permissionIds = [] } = validatedData;
 
@@ -432,7 +432,7 @@ router.post('/roles', authenticateToken, requireTenant, can('create:roles'), asy
  * GET /permissions
  * Get all permissions
  */
-router.get('/permissions', authenticateToken, requireTenant, can('read:permissions'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/permissions', authenticateToken, tenantMiddleware, requireTenant, can('read:permissions'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
 
   const permissions = await prisma.permission.findMany({
@@ -461,7 +461,7 @@ router.get('/permissions', authenticateToken, requireTenant, can('read:permissio
  * POST /permissions
  * Create a new permission
  */
-router.post('/permissions', authenticateToken, requireTenant, can('create:permissions'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/permissions', authenticateToken, tenantMiddleware, requireTenant, can('create:permissions'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createPermissionSchema.parse(req.body);
   const { name, description, resource, action } = validatedData;
 
@@ -514,7 +514,7 @@ router.post('/permissions', authenticateToken, requireTenant, can('create:permis
  * GET /groups
  * Get all groups
  */
-router.get('/groups', authenticateToken, requireTenant, can('read:groups'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/groups', authenticateToken, tenantMiddleware, requireTenant, can('read:groups'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
 
   const groups = await prisma.group.findMany({
@@ -547,7 +547,7 @@ router.get('/groups', authenticateToken, requireTenant, can('read:groups'), asyn
  * POST /groups
  * Create a new group
  */
-router.post('/groups', authenticateToken, requireTenant, can('create:groups'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/groups', authenticateToken, tenantMiddleware, requireTenant, can('create:groups'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createGroupSchema.parse(req.body);
   const { name, description, parentId } = validatedData;
 

@@ -11,7 +11,8 @@ import { authRoutes } from './core/auth/authRoutes';
 import { iamRoutes } from './core/iam/iamRoutes';
 import { tenantRoutes } from './core/tenants/tenantRoutes';
 import { notificationRoutes } from './core/notifications/notificationRoutes';
-import { billingRoutes } from './core/billing/billingRoutes';
+import coreBillingRoutes from './core/billing/coreBillingRoutes';
+import { billingCronService } from './core/billing/billingCronService';
 import { aiRoutes } from './core/ai/aiRoutes';
 import { config } from './config/config';
 
@@ -74,7 +75,7 @@ app.use('/auth', authRoutes);
 app.use('/iam', iamRoutes);
 app.use('/tenants', tenantRoutes);
 app.use('/notifications', notificationRoutes);
-app.use('/billing', billingRoutes);
+app.use('/billing', coreBillingRoutes);
 app.use('/ai', aiRoutes);
 
 // 404 handler
@@ -88,6 +89,9 @@ app.all('/{*splat}', (req, res) => {
 
 // Global error handler
 app.use(errorHandler);
+
+// Start billing cron service
+billingCronService.start();
 
 // Start server
 const PORT = config.port;

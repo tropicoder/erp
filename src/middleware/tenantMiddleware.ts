@@ -79,7 +79,7 @@ export const tenantMiddleware = async (
     let projectId = req.headers['x-project-id'] as string;
     // If no project ID in header, try to get it from domain
     if (!projectId) {
-      const host = req.get('host');
+      const host = req.get('host'); //referal host not this host
       if (host) {
         // Extract and normalize domain from host
         const domain = extractDomainFromHost(host);
@@ -197,7 +197,9 @@ function createS3Client(config: {
     // Mock methods - replace with actual AWS SDK methods
     upload: async (params: any) => {
       logger.info({ params }, 'Mock S3 upload');
-      return { Location: `https://${config.bucket}.s3.amazonaws.com/${params.Key}` };
+      // Use the configured endpoint for the S3 URL
+      // return { Location: `https://${config.bucket}.s3.amazonaws.com/${params.Key}` };
+      return { Location: `${config.endpoint.replace(/\/$/, '')}/${config.bucket}/${params.Key}` };
     },
     getObject: async (params: any) => {
       logger.info({ params }, 'Mock S3 getObject');

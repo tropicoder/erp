@@ -6,6 +6,8 @@ import { getMainClient } from '../../shared/database/mainClient';
 import { encrypt } from '../../shared/utils/encryption';
 import { normalizeDomain, isValidDomain } from '../../shared/utils/domainUtils';
 import { eventBus, EventNames } from '../event-bus';
+import { coreBillingService } from '../billing/coreBillingService';
+import { userBillingService } from '../billing/userBillingService';
 import pino from 'pino';
 
 const logger = pino();
@@ -191,6 +193,26 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
       role: 'admin',
     },
   });
+
+  // Create default subscription for the project
+  try {
+    const subscription = await coreBillingService.createSubscription(
+      project.id,
+      req.user!.id,
+      10.00, // Default user price per month
+      0.00   // Default application price per month
+    );
+
+    logger.info({
+      projectId: project.id,
+      subscriptionId: subscription.id,
+    }, 'Default subscription created for project');
+  } catch (error) {
+    logger.error({
+      projectId: project.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Failed to create default subscription');
+  }
 
   // Publish event
   await eventBus.publish(EventNames.PROJECT_CREATED, {
@@ -541,6 +563,17 @@ router.post('/:id/users', authenticateToken, asyncHandler(async (req: Request, r
       },
     },
   });
+
+  // Process billing for new user (prorated invoice)
+  try {
+    await userBillingService.handleUserAdded(projectId, userId);
+  } catch (error) {
+    logger.error({
+      projectId,
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Failed to process billing for new user');
+  }
 
   logger.info({
     projectId,

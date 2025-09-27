@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { authenticateToken } from '../../middleware/authMiddleware';
-import { requireTenant } from '../../middleware/tenantMiddleware';
+import { requireTenant, tenantMiddleware } from '../../middleware/tenantMiddleware';
 import { can } from '../iam/permissionMiddleware';
 import { getTenantPrisma } from '../../middleware/tenantMiddleware';
 import { notificationService } from './notificationService';
@@ -55,7 +55,7 @@ const updateTemplateSchema = z.object({
  * POST /notifications/send
  * Send a single notification
  */
-router.post('/send', authenticateToken, requireTenant, can('create:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/send', authenticateToken, tenantMiddleware, requireTenant, can('create:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = sendNotificationSchema.parse(req.body);
   const prisma = getTenantPrisma(req);
 
@@ -103,7 +103,7 @@ router.post('/send', authenticateToken, requireTenant, can('create:notifications
  * POST /notifications/send-bulk
  * Send multiple notifications
  */
-router.post('/send-bulk', authenticateToken, requireTenant, can('create:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/send-bulk', authenticateToken, tenantMiddleware, requireTenant, can('create:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = sendBulkNotificationSchema.parse(req.body);
   const prisma = getTenantPrisma(req);
 
@@ -163,7 +163,7 @@ router.post('/send-bulk', authenticateToken, requireTenant, can('create:notifica
  * GET /notifications/history
  * Get notification history
  */
-router.get('/history', authenticateToken, requireTenant, can('read:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/history', authenticateToken, tenantMiddleware, requireTenant, can('read:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
   const { page = 1, limit = 10, type, status, recipient } = req.query;
 
@@ -212,7 +212,7 @@ router.get('/history', authenticateToken, requireTenant, can('read:notifications
  * GET /notifications/templates
  * Get notification templates
  */
-router.get('/templates', authenticateToken, requireTenant, can('read:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/templates', authenticateToken, tenantMiddleware, requireTenant, can('read:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
   const { type, isActive } = req.query;
 
@@ -235,7 +235,7 @@ router.get('/templates', authenticateToken, requireTenant, can('read:notificatio
  * POST /notifications/templates
  * Create notification template
  */
-router.post('/templates', authenticateToken, requireTenant, can('create:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/templates', authenticateToken, tenantMiddleware, requireTenant, can('create:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createTemplateSchema.parse(req.body);
   const prisma = getTenantPrisma(req);
 
@@ -275,7 +275,7 @@ router.post('/templates', authenticateToken, requireTenant, can('create:notifica
  * PUT /notifications/templates/:id
  * Update notification template
  */
-router.put('/templates/:id', authenticateToken, requireTenant, can('update:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.put('/templates/:id', authenticateToken, tenantMiddleware, requireTenant, can('update:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = updateTemplateSchema.parse(req.body);
   const { id } = req.params;
   const prisma = getTenantPrisma(req);
@@ -317,7 +317,7 @@ router.put('/templates/:id', authenticateToken, requireTenant, can('update:notif
  * DELETE /notifications/templates/:id
  * Delete notification template
  */
-router.delete('/templates/:id', authenticateToken, requireTenant, can('delete:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.delete('/templates/:id', authenticateToken, tenantMiddleware, requireTenant, can('delete:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const prisma = getTenantPrisma(req);
 
@@ -356,7 +356,7 @@ router.delete('/templates/:id', authenticateToken, requireTenant, can('delete:no
  * GET /notifications/providers
  * Get available notification providers
  */
-router.get('/providers', authenticateToken, requireTenant, can('read:notifications'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/providers', authenticateToken, tenantMiddleware, requireTenant, can('read:notifications'), asyncHandler(async (req: Request, res: Response) => {
   const stats = notificationService.getStats();
 
   res.json({

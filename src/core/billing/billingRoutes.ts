@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { authenticateToken } from '../../middleware/authMiddleware';
-import { requireTenant } from '../../middleware/tenantMiddleware';
+import { requireTenant, tenantMiddleware } from '../../middleware/tenantMiddleware';
 import { can } from '../iam/permissionMiddleware';
 import { getTenantPrisma } from '../../middleware/tenantMiddleware';
 import { billingService } from './billingService';
@@ -57,7 +57,7 @@ const updatePlanSchema = z.object({
  * GET /billing/plans
  * Get all available plans
  */
-router.get('/plans', authenticateToken, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/plans', authenticateToken, tenantMiddleware, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
 
   const plans = await prisma.plan.findMany({
@@ -75,7 +75,7 @@ router.get('/plans', authenticateToken, requireTenant, can('read:billing'), asyn
  * POST /billing/plans
  * Create a new plan
  */
-router.post('/plans', authenticateToken, requireTenant, can('create:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/plans', authenticateToken, tenantMiddleware, requireTenant, can('create:billing'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createPlanSchema.parse(req.body);
   const prisma = getTenantPrisma(req);
 
@@ -116,7 +116,7 @@ router.post('/plans', authenticateToken, requireTenant, can('create:billing'), a
  * PUT /billing/plans/:id
  * Update a plan
  */
-router.put('/plans/:id', authenticateToken, requireTenant, can('update:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.put('/plans/:id', authenticateToken, tenantMiddleware, requireTenant, can('update:billing'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = updatePlanSchema.parse(req.body);
   const { id } = req.params;
   const prisma = getTenantPrisma(req);
@@ -158,7 +158,7 @@ router.put('/plans/:id', authenticateToken, requireTenant, can('update:billing')
  * GET /billing/subscription
  * Get current subscription
  */
-router.get('/subscription', authenticateToken, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/subscription', authenticateToken, tenantMiddleware, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
 
   // Get current subscription
@@ -189,7 +189,7 @@ router.get('/subscription', authenticateToken, requireTenant, can('read:billing'
  * POST /billing/subscribe
  * Create a new subscription
  */
-router.post('/subscribe', authenticateToken, requireTenant, can('create:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/subscribe', authenticateToken, tenantMiddleware, requireTenant, can('create:billing'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createSubscriptionSchema.parse(req.body);
   const { planId, provider } = validatedData;
   const prisma = getTenantPrisma(req);
@@ -271,7 +271,7 @@ router.post('/subscribe', authenticateToken, requireTenant, can('create:billing'
  * PUT /billing/subscription/:id
  * Update subscription
  */
-router.put('/subscription/:id', authenticateToken, requireTenant, can('update:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.put('/subscription/:id', authenticateToken, tenantMiddleware, requireTenant, can('update:billing'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = updateSubscriptionSchema.parse(req.body);
   const { id } = req.params;
   const { planId, provider } = validatedData;
@@ -349,7 +349,7 @@ router.put('/subscription/:id', authenticateToken, requireTenant, can('update:bi
  * DELETE /billing/subscription/:id
  * Cancel subscription
  */
-router.delete('/subscription/:id', authenticateToken, requireTenant, can('update:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.delete('/subscription/:id', authenticateToken, tenantMiddleware, requireTenant, can('update:billing'), asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { provider = 'stripe' } = req.body;
   const prisma = getTenantPrisma(req);
@@ -411,7 +411,7 @@ router.delete('/subscription/:id', authenticateToken, requireTenant, can('update
  * POST /billing/payment
  * Process a one-time payment
  */
-router.post('/payment', authenticateToken, requireTenant, can('create:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/payment', authenticateToken, tenantMiddleware, requireTenant, can('create:billing'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = processPaymentSchema.parse(req.body);
   const { amount, currency, provider } = validatedData;
 
@@ -451,7 +451,7 @@ router.post('/payment', authenticateToken, requireTenant, can('create:billing'),
  * GET /billing/usage
  * Get usage statistics
  */
-router.get('/usage', authenticateToken, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/usage', authenticateToken, tenantMiddleware, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
 
   // Get current subscription
@@ -502,7 +502,7 @@ router.get('/usage', authenticateToken, requireTenant, can('read:billing'), asyn
  * GET /billing/providers
  * Get available payment providers
  */
-router.get('/providers', authenticateToken, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/providers', authenticateToken, tenantMiddleware, requireTenant, can('read:billing'), asyncHandler(async (req: Request, res: Response) => {
   const stats = billingService.getStats();
 
   res.json({

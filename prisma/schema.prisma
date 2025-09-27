@@ -1,5 +1,7 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
+// npx prisma migrate reset --schema=prisma/schema.prisma --force
+// npx prisma migrate dev --name "updates" --schema=prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -22,13 +24,14 @@ model User {
   firstName String?
   lastName  String?
   avatar    String?
-  isActive  Boolean  @default(false)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   projects     UserProject[]
   refreshTokens RefreshToken[]
+  subscriptions Subscription[]
 
   @@map("users")
 }
@@ -54,12 +57,15 @@ model Project {
   llmApiKey   String?     // Encrypted, optional for tenant-specific keys
   
   // Status and metadata
-  isActive  Boolean  @default(true)
+  isActive  Boolean  @default(true) // Billing status
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
   users UserProject[]
+  subscriptions Subscription[]
+  invoices Invoice[]
+  tenantApplications TenantApplication[]
 
   @@map("projects")
 }
@@ -94,10 +100,113 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// Billing models in main database
+model Subscription {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String   // Owner of the subscription
+
+  // Pricing
+  userPricePerMonth    Decimal @default(10.00) // Price per user per month
+  applicationPricePerMonth Decimal @default(0.00) // Base price for applications
+
+  // Status
+  isActive    Boolean  @default(true)
+  lastBilled  DateTime?
+  nextBilling  DateTime
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  subscriptionId String
+  projectId     String
+
+  // Invoice details
+  invoiceNumber String   @unique
+  amount        Decimal
+  userCount     Int
+  applicationCount Int
+  userAmount    Decimal
+  applicationAmount Decimal
+
+  // Billing period
+  periodStart   DateTime
+  periodEnd     DateTime
+
+  // Status
+  status        InvoiceStatus @default(PENDING)
+  paidAt        DateTime?
+  dueDate       DateTime
+
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?  // Icon URL or identifier
+  listed      Boolean  @default(true) // Show in application listing
+  pricePerMonth Decimal @default(0.00) // Base price per month for this application
+
+  // Status
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenantApplications TenantApplication[]
+
+  @@map("applications")
+}
+
+model TenantApplication {
+  id            String   @id @default(cuid())
+  projectId     String
+  applicationId String
+  customPrice   Decimal? // Override price for this tenant (optional)
+  isActive      Boolean  @default(true)
+  addedAt       DateTime @default(now())
+
+  // Relations
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, applicationId])
+  @@map("tenant_applications")
+}
+
 // Enums
 enum LlmProvider {
   NEXUS
   OPENAI
   ANTHROPIC
   CUSTOM
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
 }

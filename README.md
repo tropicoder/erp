@@ -11,7 +11,7 @@ A modern, headless, API-first ERP system built with Express.js and TypeScript. N
 - **Event-Driven Architecture**: In-memory event bus for inter-module communication
 - **Service Broker**: Inter-module service registry and communication
 - **Unified Notifications**: Multi-channel notification system (Email, SMS, Push)
-- **Billing & Monetization**: Subscription management with multiple payment providers
+- **Core-Based Billing**: Centralized billing with user-based and application-based pricing
 - **AI & Search**: LLM integration with federated search capabilities
 
 ### Technical Highlights
@@ -234,26 +234,43 @@ Content-Type: application/json
 }
 ```
 
-### Billing
-
-#### Get Plans
-```http
-GET /billing/plans
-Authorization: Bearer your-access-token
-X-Project-ID: {projectId}
-```
+### Core-Based Billing
 
 #### Create Subscription
 ```http
-POST /billing/subscribe
+POST /billing/subscriptions
 Authorization: Bearer your-access-token
-X-Project-ID: {projectId}
 Content-Type: application/json
 
 {
-  "planId": "plan-id",
-  "provider": "stripe"
+  "projectId": "proj_123",
+  "userPricePerMonth": 10.00,
+  "applicationPricePerMonth": 0.00
 }
+```
+
+#### Get Billing Status
+```http
+GET /billing/subscriptions/{projectId}
+Authorization: Bearer your-access-token
+```
+
+#### Process Payment
+```http
+POST /billing/payments/process
+Authorization: Bearer your-access-token
+Content-Type: application/json
+
+{
+  "invoiceId": "inv_123",
+  "paymentMethod": "stripe"
+}
+```
+
+#### Get Invoices
+```http
+GET /billing/invoices/{projectId}?page=1&limit=10
+Authorization: Bearer your-access-token
 ```
 
 ### AI & Search
@@ -357,6 +374,17 @@ Nexus uses a **resource-per-tenant** strategy:
 3. **Tenant Storage**: Each tenant has dedicated S3-compatible storage
 4. **Dynamic Clients**: Prisma and S3 clients are created dynamically per request
 5. **Domain-Based Access**: Tenants can be accessed via custom domains or X-Project-ID header
+
+### Core-Based Billing Philosophy
+
+Nexus implements a **centralized billing model** where billing is managed at the platform level:
+
+1. **User-Based Pricing**: $10.00 per active user per month
+2. **Application-Based Pricing**: Variable pricing per application (0 to unlimited)
+3. **Prorated Billing**: New users are billed prorated for remaining days in the month
+4. **Automatic Billing**: Monthly billing on the last day of each month
+5. **Automatic Enforcement**: Tenants are automatically deactivated for non-payment
+6. **Centralized Management**: All billing data stored in main database
 
 ### Event-Driven Architecture
 
@@ -534,6 +562,12 @@ For support and questions:
 - Create an issue in the repository
 - Check the documentation
 - Review the API examples
+
+## 📚 Documentation
+
+- [API Documentation](docs/API.md) - Complete API reference with examples
+- [Domain Feature](docs/DOMAIN_FEATURE.md) - Custom domain access guide
+- [Billing Philosophy](docs/BILLING_PHILOSOPHY.md) - Core-based billing system
 
 ## 🗺️ Roadmap
 

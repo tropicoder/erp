@@ -1,5 +1,6 @@
 // Tenant-specific database schema
 // This schema is used for each tenant's dedicated database
+// Run : npx prisma migrate dev --schema=prisma/tenant-schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -101,41 +102,8 @@ model UserGroup {
   @@map("user_groups")
 }
 
-// Billing and subscription management
-model Plan {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  price       Decimal  @db.Decimal(10, 2)
-  currency    String   @default("USD")
-  interval    String   // monthly, yearly
-  features    Json     // JSON object with plan features
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  subscriptions Subscription[]
-
-  @@map("plans")
-}
-
-model Subscription {
-  id                String            @id @default(cuid())
-  planId            String
-  status            SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean           @default(false)
-  canceledAt        DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-
-  // Relations
-  plan Plan @relation(fields: [planId], references: [id])
-
-  @@map("subscriptions")
-}
+// Note: Billing and subscription management has been moved to the main database
+// All billing-related models (Plan, Subscription) are now in the main schema
 
 // API call logging for LLM usage tracking
 model ApiCallLog {
@@ -188,14 +156,6 @@ model Notification {
 }
 
 // Enums
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  PAST_DUE
-  UNPAID
-  TRIALING
-}
-
 enum NotificationStatus {
   PENDING
   SENT

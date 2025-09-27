@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { authenticateToken } from '../../middleware/authMiddleware';
-import { requireTenant } from '../../middleware/tenantMiddleware';
+import { requireTenant, tenantMiddleware } from '../../middleware/tenantMiddleware';
 import { can } from '../iam/permissionMiddleware';
 import { getTenantPrisma } from '../../middleware/tenantMiddleware';
 import { llmService } from './llmService';
@@ -48,7 +48,7 @@ const indexContentSchema = z.object({
  * POST /ai/completion
  * Get LLM completion
  */
-router.post('/completion', authenticateToken, requireTenant, can('create:ai'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/completion', authenticateToken, tenantMiddleware, requireTenant, can('create:ai'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = completionSchema.parse(req.body);
 
   // Get completion from LLM service
@@ -84,7 +84,7 @@ router.post('/completion', authenticateToken, requireTenant, can('create:ai'), a
  * POST /ai/search
  * Execute federated search
  */
-router.post('/search', authenticateToken, requireTenant, can('read:search'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/search', authenticateToken, tenantMiddleware, requireTenant, can('read:search'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = searchSchema.parse(req.body);
 
   // Execute search
@@ -122,7 +122,7 @@ router.post('/search', authenticateToken, requireTenant, can('read:search'), asy
  * POST /ai/index
  * Index content for search
  */
-router.post('/index', authenticateToken, requireTenant, can('create:search'), asyncHandler(async (req: Request, res: Response) => {
+router.post('/index', authenticateToken, tenantMiddleware, requireTenant, can('create:search'), asyncHandler(async (req: Request, res: Response) => {
   const validatedData = indexContentSchema.parse(req.body);
 
   // Index content
@@ -164,7 +164,7 @@ router.post('/index', authenticateToken, requireTenant, can('create:search'), as
  * GET /ai/usage
  * Get LLM usage statistics
  */
-router.get('/usage', authenticateToken, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/usage', authenticateToken, tenantMiddleware, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
   const prisma = getTenantPrisma(req);
   const { days = 30 } = req.query;
 
@@ -184,7 +184,7 @@ router.get('/usage', authenticateToken, requireTenant, can('read:ai'), asyncHand
  * GET /ai/providers
  * Get available LLM providers
  */
-router.get('/providers', authenticateToken, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/providers', authenticateToken, tenantMiddleware, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
   const providers = llmService.getProviders();
 
   res.json({
@@ -200,7 +200,7 @@ router.get('/providers', authenticateToken, requireTenant, can('read:ai'), async
  * GET /ai/models
  * Get available models for each provider
  */
-router.get('/models', authenticateToken, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/models', authenticateToken, tenantMiddleware, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
   // Mock model data (in production, this would come from actual provider APIs)
   const models = {
     openai: [
@@ -225,7 +225,7 @@ router.get('/models', authenticateToken, requireTenant, can('read:ai'), asyncHan
  * GET /ai/health
  * Check AI service health
  */
-router.get('/health', authenticateToken, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
+router.get('/health', authenticateToken, tenantMiddleware, requireTenant, can('read:ai'), asyncHandler(async (req: Request, res: Response) => {
   const providers = llmService.getProviders();
   const healthChecks = await Promise.allSettled(
     providers.map(async (providerName) => {
