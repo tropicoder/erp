@@ -245,10 +245,11 @@ router.post('/templates', authenticateToken, requireTenant, can('create:notifica
   });
 
   if (existingTemplate) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Template with this name already exists',
     });
+    return;
   }
 
   // Create template
@@ -285,10 +286,12 @@ router.put('/templates/:id', authenticateToken, requireTenant, can('update:notif
   });
 
   if (!existingTemplate) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Template not found',
     });
+
+    return;
   }
 
   // Update template
@@ -324,10 +327,12 @@ router.delete('/templates/:id', authenticateToken, requireTenant, can('delete:no
   });
 
   if (!existingTemplate) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Template not found',
     });
+
+    return;
   }
 
   // Delete template

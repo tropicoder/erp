@@ -128,10 +128,11 @@ router.post('/users', authenticateToken, requireTenant, can('create:users'), asy
   });
 
   if (existingUser) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'User with this email already exists',
     });
+    return;
   }
 
   // Create user
@@ -211,7 +212,7 @@ router.get('/users/:id', authenticateToken, requireTenant, can('read:users'), as
   });
 
   if (!user) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       message: 'User not found',
     });
@@ -240,7 +241,7 @@ router.put('/users/:id', authenticateToken, requireTenant, can('update:users'), 
   });
 
   if (!existingUser) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       message: 'User not found',
     });
@@ -305,7 +306,7 @@ router.delete('/users/:id', authenticateToken, requireTenant, can('delete:users'
   });
 
   if (!existingUser) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       message: 'User not found',
     });
@@ -383,10 +384,11 @@ router.post('/roles', authenticateToken, requireTenant, can('create:roles'), asy
   });
 
   if (existingRole) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'Role with this name already exists',
     });
+    return;
   }
 
   // Create role
@@ -474,10 +476,11 @@ router.post('/permissions', authenticateToken, requireTenant, can('create:permis
   });
 
   if (existingPermission) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'Permission with this resource and action already exists',
     });
+    return;
   }
 
   // Create permission
@@ -556,10 +559,11 @@ router.post('/groups', authenticateToken, requireTenant, can('create:groups'), a
   });
 
   if (existingGroup) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Group with this name already exists',
     });
+    return;
   }
 
   // Create group

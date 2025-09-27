@@ -2,10 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { getMainClient } from '../shared/database/mainClient';
 import { getTenantClient } from '../shared/database/tenantClient';
 import { decrypt } from '../shared/utils/encryption';
+import { extractDomainFromHost, normalizeDomain } from '../shared/utils/domainUtils';
 import { createError } from './errorHandler';
 import pino from 'pino';
 
 const logger = pino();
+
 
 // Extend Express Request interface to include tenant context
 declare global {
@@ -29,9 +31,44 @@ declare global {
   }
 }
 
+
+/**
+ * Get project ID by domain
+ * @param domain - The domain to look up
+ * @returns Project ID or null if not found
+ */
+async function getProjectIdByDomain(domain: string): Promise<string | null> {
+  try {
+    const mainClient = getMainClient();
+
+    const project = await mainClient.project.findFirst({
+      where: { domain } as any,
+      select: { id: true },
+    });
+
+    if (project) {
+      logger.debug({
+        domain,
+        projectId: project.id,
+      }, 'Project found by domain');
+
+      return project.id;
+    }
+
+    return null;
+  } catch (error) {
+    logger.error({
+      domain,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Failed to get project by domain');
+
+    return null;
+  }
+}
+
 /**
  * Middleware to identify and load tenant context
- * Looks for X-Project-ID header and loads tenant configuration
+ * Looks for X-Project-ID header or domain-based identification
  */
 export const tenantMiddleware = async (
   req: Request,
@@ -39,7 +76,20 @@ export const tenantMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const projectId = req.headers['x-project-id'] as string;
+    let projectId = req.headers['x-project-id'] as string;
+    // If no project ID in header, try to get it from domain
+    if (!projectId) {
+      const host = req.get('host');
+      if (host) {
+        // Extract and normalize domain from host
+        const domain = extractDomainFromHost(host);
+        const normalizedDomain = normalizeDomain(domain);
+        const foundProjectId = await getProjectIdByDomain(normalizedDomain);
+        if (foundProjectId) {
+          projectId = foundProjectId;
+        }
+      }
+    }
     
     if (!projectId) {
       // For some routes, tenant context might not be required

@@ -78,7 +78,7 @@ app.use('/billing', billingRoutes);
 app.use('/ai', aiRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
+app.all('/{*splat}', (req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found',

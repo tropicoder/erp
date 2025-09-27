@@ -4,6 +4,7 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { authenticateToken } from '../../middleware/authMiddleware';
 import { getMainClient } from '../../shared/database/mainClient';
 import { encrypt } from '../../shared/utils/encryption';
+import { normalizeDomain, isValidDomain } from '../../shared/utils/domainUtils';
 import { eventBus, EventNames } from '../event-bus';
 import pino from 'pino';
 
@@ -14,6 +15,7 @@ const router = Router();
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
   slug: z.string().min(1, 'Project slug is required').regex(/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'),
+  domain: z.string().min(1, 'Domain is required').refine(isValidDomain, 'Invalid domain format').optional(),
   dbConnectionString: z.string().min(1, 'Database connection string is required'),
   s3Bucket: z.string().min(1, 'S3 bucket name is required'),
   s3Endpoint: z.string().url('Invalid S3 endpoint URL'),
@@ -25,6 +27,7 @@ const createProjectSchema = z.object({
 
 const updateProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required').optional(),
+  domain: z.string().min(1, 'Domain is required').refine(isValidDomain, 'Invalid domain format').optional(),
   dbConnectionString: z.string().min(1, 'Database connection string is required').optional(),
   s3Bucket: z.string().min(1, 'S3 bucket name is required').optional(),
   s3Endpoint: z.string().url('Invalid S3 endpoint URL').optional(),
@@ -44,7 +47,7 @@ const addUserToProjectSchema = z.object({
  * GET /tenants
  * Get all projects/tenants (admin only)
  */
-router.get('/tenants', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.get('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const mainClient = getMainClient();
   const { page = 1, limit = 10, search } = req.query;
 
@@ -53,8 +56,9 @@ router.get('/tenants', authenticateToken, asyncHandler(async (req: Request, res:
 
   const where = search ? {
     OR: [
-      { name: { contains: search as string, mode: 'insensitive' } },
-      { slug: { contains: search as string, mode: 'insensitive' } },
+      { name: { contains: search as string, mode: 'insensitive' as const } },
+      { slug: { contains: search as string, mode: 'insensitive' as const } },
+      { domain: { contains: search as string, mode: 'insensitive' as const } },
     ],
   } : {};
 
@@ -109,11 +113,12 @@ router.get('/tenants', authenticateToken, asyncHandler(async (req: Request, res:
  * POST /tenants
  * Create a new project/tenant
  */
-router.post('/tenants', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createProjectSchema.parse(req.body);
   const {
     name,
     slug,
+    domain: rawDomain,
     dbConnectionString,
     s3Bucket,
     s3Endpoint,
@@ -123,18 +128,32 @@ router.post('/tenants', authenticateToken, asyncHandler(async (req: Request, res
     llmApiKey,
   } = validatedData;
 
+  // Normalize domain if provided
+  const domain = rawDomain ? normalizeDomain(rawDomain) : undefined;
+
   const mainClient = getMainClient();
 
-  // Check if project with this slug already exists
-  const existingProject = await mainClient.project.findUnique({
-    where: { slug },
+  // Check if project with this slug or domain already exists
+  const whereConditions: any[] = [{ slug }];
+  if (domain) {
+    whereConditions.push({ domain });
+  }
+
+  const existingProject = await mainClient.project.findFirst({
+    where: {
+      OR: whereConditions,
+    },
   });
 
   if (existingProject) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
-      message: 'Project with this slug already exists',
+      message: existingProject.slug === slug
+        ? 'Project with this slug already exists'
+        : 'Project with this domain already exists',
     });
+
+    return;
   }
 
   // Encrypt sensitive data
@@ -144,18 +163,24 @@ router.post('/tenants', authenticateToken, asyncHandler(async (req: Request, res
   const encryptedLlmApiKey = llmApiKey ? encrypt(llmApiKey) : null;
 
   // Create project
+  const projectData: any = {
+    name,
+    slug,
+    dbConnectionString: encryptedDbConnectionString,
+    s3Bucket,
+    s3Endpoint,
+    s3AccessKey: encryptedS3AccessKey,
+    s3SecretKey: encryptedS3SecretKey,
+    llmProvider,
+    llmApiKey: encryptedLlmApiKey,
+  };
+
+  if (domain) {
+    projectData.domain = domain;
+  }
+
   const project = await mainClient.project.create({
-    data: {
-      name,
-      slug,
-      dbConnectionString: encryptedDbConnectionString,
-      s3Bucket,
-      s3Endpoint,
-      s3AccessKey: encryptedS3AccessKey,
-      s3SecretKey: encryptedS3SecretKey,
-      llmProvider,
-      llmApiKey: encryptedLlmApiKey,
-    },
+    data: projectData,
   });
 
   // Add creator as admin
@@ -195,13 +220,16 @@ router.post('/tenants', authenticateToken, asyncHandler(async (req: Request, res
       },
     },
   });
+
+  //intialize tenant here ?
+
 }));
 
 /**
  * GET /tenants/:id
  * Get project by ID
  */
-router.get('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const mainClient = getMainClient();
   const { id } = req.params;
 
@@ -224,10 +252,12 @@ router.get('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, 
   });
 
   if (!project) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Project not found',
     });
+
+    return;
   }
 
   // Check if user has access to this project
@@ -239,10 +269,12 @@ router.get('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, 
   });
 
   if (!userProject) {
-    return res.status(403).json({
+    res.status(403).json({
       success: false,
       message: 'Access denied to this project',
     });
+
+    return;
   }
 
   // Remove sensitive data from response
@@ -264,7 +296,7 @@ router.get('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, 
  * PUT /tenants/:id
  * Update project
  */
-router.put('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = updateProjectSchema.parse(req.body);
   const { id } = req.params;
 
@@ -276,10 +308,12 @@ router.put('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, 
   });
 
   if (!existingProject) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       message: 'Project not found',
     });
+
+    return ;
   }
 
   // Check if user is admin of this project
@@ -292,10 +326,12 @@ router.put('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, 
   });
 
   if (!userProject) {
-    return res.status(403).json({
+    res.status(403).json({
       success: false,
       message: 'Admin access required to update project',
     });
+
+    return;
   }
 
   // Prepare update data
@@ -353,7 +389,7 @@ router.put('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, 
  * DELETE /tenants/:id
  * Delete project
  */
-router.delete('/tenants/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const mainClient = getMainClient();
   const { id } = req.params;
 
@@ -363,10 +399,12 @@ router.delete('/tenants/:id', authenticateToken, asyncHandler(async (req: Reques
   });
 
   if (!existingProject) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Project not found',
     });
+
+    return;
   }
 
   // Check if user is admin of this project
@@ -379,10 +417,12 @@ router.delete('/tenants/:id', authenticateToken, asyncHandler(async (req: Reques
   });
 
   if (!userProject) {
-    return res.status(403).json({
+     res.status(403).json({
       success: false,
       message: 'Admin access required to delete project',
     });
+
+    return;
   }
 
   // Delete project (cascade will handle related records)
@@ -413,7 +453,7 @@ router.delete('/tenants/:id', authenticateToken, asyncHandler(async (req: Reques
  * POST /tenants/:id/users
  * Add user to project
  */
-router.post('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.post('/:id/users', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const validatedData = addUserToProjectSchema.parse(req.body);
   const { id: projectId } = req.params;
   const { userId, role } = validatedData;
@@ -426,10 +466,12 @@ router.post('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Re
   });
 
   if (!project) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Project not found',
     });
+
+    return;
   }
 
   // Check if user is admin of this project
@@ -442,10 +484,12 @@ router.post('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Re
   });
 
   if (!userProject) {
-    return res.status(403).json({
+    res.status(403).json({
       success: false,
       message: 'Admin access required to add users to project',
     });
+
+    return;
   }
 
   // Check if user exists
@@ -454,10 +498,12 @@ router.post('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Re
   });
 
   if (!user) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       message: 'User not found',
     });
+
+    return;
   }
 
   // Check if user is already in project
@@ -469,10 +515,12 @@ router.post('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Re
   });
 
   if (existingUserProject) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'User is already a member of this project',
     });
+
+    return;
   }
 
   // Add user to project
@@ -512,7 +560,7 @@ router.post('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Re
  * GET /tenants/:id/users
  * Get project users
  */
-router.get('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.get('/:id/users', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const mainClient = getMainClient();
   const { id: projectId } = req.params;
 
@@ -525,10 +573,12 @@ router.get('/tenants/:id/users', authenticateToken, asyncHandler(async (req: Req
   });
 
   if (!userProject) {
-    return res.status(403).json({
+    res.status(403).json({
       success: false,
       message: 'Access denied to this project',
     });
+
+    return;
   }
 
   const projectUsers = await mainClient.userProject.findMany({

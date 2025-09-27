@@ -7,6 +7,7 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { authenticateToken } from '../../middleware/authMiddleware';
 import { eventBus, EventNames } from '../event-bus';
 import pino from 'pino';
+import { config } from '../../config/config';
 
 const logger = pino();
 const router = Router();
@@ -44,10 +45,11 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (existingUser) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message: 'User with this email already exists',
     });
+    return;
   }
 
   // Hash password
@@ -74,7 +76,8 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
 
   // Store refresh token
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+  const refreshTokenExpiresIn = Number(config.jwtRefreshExpiresIn.replace(/d$/, ''));
+  expiresAt.setDate(expiresAt.getDate() + refreshTokenExpiresIn);
   await JWTService.storeRefreshToken(user.id, refreshTokenId, expiresAt);
 
   // Publish event
@@ -104,7 +107,7 @@ router.post('/register', asyncHandler(async (req: Request, res: Response) => {
       tokens: {
         accessToken,
         refreshToken,
-        expiresIn: '15m',
+        expiresIn: config.jwtExpiresIn,
       },
     },
   });
@@ -126,26 +129,29 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (!user) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Invalid email or password',
     });
+    return;
   }
 
   if (!user.isActive) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Account is inactive',
     });
+    return;
   }
 
   // Verify password
   const isPasswordValid = await verifyPassword(password, user.password);
   if (!isPasswordValid) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Invalid email or password',
     });
+    return;
   }
 
   // Generate tokens
@@ -159,7 +165,8 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
 
   // Store refresh token
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+  const refreshTokenExpiresIn = Number(config.jwtRefreshExpiresIn.replace(/d$/, ''));
+  expiresAt.setDate(expiresAt.getDate() + refreshTokenExpiresIn);
   await JWTService.storeRefreshToken(user.id, refreshTokenId, expiresAt);
 
   // Publish event
@@ -187,11 +194,13 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
       tokens: {
         accessToken,
         refreshToken,
-        expiresIn: '15m',
+        expiresIn: config.jwtExpiresIn,
       },
     },
   });
 }));
+
+
 
 /**
  * POST /auth/refresh-token
@@ -207,10 +216,11 @@ router.post('/refresh-token', asyncHandler(async (req: Request, res: Response) =
   // Validate refresh token in database
   const storedToken = await JWTService.validateRefreshToken(payload.tokenId);
   if (!storedToken) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       message: 'Invalid refresh token',
     });
+    return;
   }
 
   // Generate new access token
@@ -229,7 +239,7 @@ router.post('/refresh-token', asyncHandler(async (req: Request, res: Response) =
     message: 'Token refreshed successfully',
     data: {
       accessToken: newAccessToken,
-      expiresIn: '15m',
+      expiresIn: config.jwtExpiresIn,
     },
   });
 }));
@@ -291,10 +301,11 @@ router.get('/me', authenticateToken, asyncHandler(async (req: Request, res: Resp
   });
 
   if (!user) {
-    return res.status(404).json({
+    res.status(404).json({
       success: false,
       message: 'User not found',
     });
+    return;
   }
 
   res.json({

@@ -55,11 +55,12 @@ router.post('/completion', authenticateToken, requireTenant, can('create:ai'), a
   const response = await llmService.getCompletion(validatedData, req);
 
   if (!response.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'LLM completion failed',
       error: response.error,
     });
+    return;
   }
 
   logger.info({
@@ -90,11 +91,13 @@ router.post('/search', authenticateToken, requireTenant, can('read:search'), asy
   const response = await searchService.execute(validatedData, req);
 
   if (!response.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Search failed',
       error: response.error,
     });
+
+    return;
   }
 
   logger.info({
@@ -135,11 +138,13 @@ router.post('/index', authenticateToken, requireTenant, can('create:search'), as
   );
 
   if (!result.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Content indexing failed',
       error: result.error,
     });
+
+    return;
   }
 
   logger.info({

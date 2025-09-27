@@ -1,7 +1,10 @@
 node_modules
 # Keep environment variables out of version control
 .env
-
+/.cursor
+/.trunk
+/dist
+/prisma/migrations
 /src/generated/prisma
 /logs
 /node_modules

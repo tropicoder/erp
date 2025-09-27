@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { config } from '../../config/config';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -18,7 +18,7 @@ export const encrypt = (text: string): string => {
   // Derive key from password and salt
   const key = crypto.pbkdf2Sync(config.encryptionKey, salt, 100000, 32, 'sha512');
   
-  const cipher = crypto.createCipher(ALGORITHM, key);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   cipher.setAAD(salt);
   
   let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -49,7 +49,7 @@ export const decrypt = (encryptedData: string): string => {
   // Derive key from password and salt
   const key = crypto.pbkdf2Sync(config.encryptionKey, salt, 100000, 32, 'sha512');
   
-  const decipher = crypto.createDecipher(ALGORITHM, key);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
   decipher.setAAD(salt);
   decipher.setAuthTag(tag);
   

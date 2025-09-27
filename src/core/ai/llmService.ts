@@ -227,16 +227,16 @@ export class LLMService {
 
     const stats = {
       totalCalls: logs.length,
-      totalTokens: logs.reduce((sum, log) => sum + log.tokensUsed, 0),
-      totalCost: logs.reduce((sum, log) => sum + (log.cost || 0), 0),
-      averageResponseTime: logs.length > 0 ? logs.reduce((sum, log) => sum + log.responseTime, 0) / logs.length : 0,
-      successRate: logs.length > 0 ? (logs.filter(log => log.success).length / logs.length) * 100 : 0,
+      totalTokens: logs.reduce((sum: number, log: any) => sum + log.tokensUsed, 0),
+      totalCost: logs.reduce((sum: number, log: any) => sum + (log.cost || 0), 0),
+      averageResponseTime: logs.length > 0 ? logs.reduce((sum: number, log: any) => sum + log.responseTime, 0) / logs.length : 0,
+      successRate: logs.length > 0 ? (logs.filter((log: any) => log.success).length / logs.length) * 100 : 0,
       providerBreakdown: {} as Record<string, any>,
     };
 
     // Calculate provider breakdown
     const providerStats: Record<string, any> = {};
-    logs.forEach(log => {
+    logs.forEach((log: any) => {
       if (!providerStats[log.provider]) {
         providerStats[log.provider] = {
           calls: 0,
@@ -252,9 +252,9 @@ export class LLMService {
 
     // Calculate success rates per provider
     Object.keys(providerStats).forEach(provider => {
-      const providerLogs = logs.filter(log => log.provider === provider);
+      const providerLogs = logs.filter((log: any) => log.provider === provider);
       providerStats[provider].successRate = providerLogs.length > 0 
-        ? (providerLogs.filter(log => log.success).length / providerLogs.length) * 100 
+        ? (providerLogs.filter((log: any) => log.success).length / providerLogs.length) * 100
         : 0;
     });
 

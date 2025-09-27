@@ -22,7 +22,7 @@ model User {
   firstName String?
   lastName  String?
   avatar    String?
-  isActive  Boolean  @default(true)
+  isActive  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -38,6 +38,7 @@ model Project {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique // URL-friendly identifier
+  domain    String?  @unique // Custom domain for SaaS access
   
   // Database connection (encrypted)
   dbConnectionString String

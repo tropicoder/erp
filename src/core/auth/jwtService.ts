@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../../config/config';
 import { getMainClient } from '../../shared/database/mainClient';
 import pino from 'pino';
@@ -38,7 +38,7 @@ export class JWTService {
       expiresIn: config.jwtExpiresIn,
       issuer: 'nexus-erp',
       audience: 'nexus-api',
-    });
+    } as SignOptions);
   }
 
   /**
@@ -57,7 +57,7 @@ export class JWTService {
       expiresIn: config.jwtRefreshExpiresIn,
       issuer: 'nexus-erp',
       audience: 'nexus-api',
-    });
+    } as SignOptions);
   }
 
   /**

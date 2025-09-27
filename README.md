@@ -178,6 +178,7 @@ Content-Type: application/json
 {
   "name": "My Company",
   "slug": "my-company",
+  "domain": "mycompany.com",
   "dbConnectionString": "postgresql://...",
   "s3Bucket": "my-company-bucket",
   "s3Endpoint": "https://s3.amazonaws.com",
@@ -287,6 +288,45 @@ Content-Type: application/json
 }
 ```
 
+## 🌐 Domain-Based Access
+
+Nexus supports custom domain access for each tenant, allowing users to access their SaaS through their own domain names.
+
+### How It Works
+
+1. **Domain Configuration**: When creating a project, you can specify a custom domain
+2. **Automatic Detection**: The system automatically detects the project based on the request domain
+3. **Fallback to Header**: If no domain match is found, the system falls back to the `X-Project-ID` header
+
+### Example Usage
+
+```bash
+# Access via custom domain
+curl -X GET https://mycompany.com/api/iam/users \
+  -H "Authorization: Bearer <access_token>"
+
+# Access via X-Project-ID header (fallback)
+curl -X GET https://api.nexus.com/iam/users \
+  -H "Authorization: Bearer <access_token>" \
+  -H "X-Project-ID: project_123"
+```
+
+### Domain Setup
+
+1. **Create Project with Domain**:
+```json
+{
+  "name": "My Company",
+  "slug": "my-company",
+  "domain": "mycompany.com",
+  // ... other fields
+}
+```
+
+2. **Configure DNS**: Point your domain to the Nexus server
+3. **SSL Certificate**: Ensure HTTPS is configured for your domain
+4. **Access**: Users can now access their SaaS at `https://mycompany.com`
+
 ## 🏗️ Architecture
 
 ### Project Structure
@@ -316,6 +356,7 @@ Nexus uses a **resource-per-tenant** strategy:
 2. **Tenant Databases**: Each tenant has a dedicated PostgreSQL database
 3. **Tenant Storage**: Each tenant has dedicated S3-compatible storage
 4. **Dynamic Clients**: Prisma and S3 clients are created dynamically per request
+5. **Domain-Based Access**: Tenants can be accessed via custom domains or X-Project-ID header
 
 ### Event-Driven Architecture
 

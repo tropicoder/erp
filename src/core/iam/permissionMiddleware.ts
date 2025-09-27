@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { getTenantPrisma } from '../middleware/tenantMiddleware';
-import { getCurrentUser } from '../middleware/authMiddleware';
-import { createError } from '../middleware/errorHandler';
+import { getTenantPrisma } from '../../middleware/tenantMiddleware';
+import { getCurrentUser } from '../../middleware/authMiddleware';
+import { createError } from '../../middleware/errorHandler';
 import pino from 'pino';
 
 const logger = pino();
@@ -290,7 +290,7 @@ export const getUserRoles = async (prisma: any, userId: string): Promise<string[
       },
     });
 
-    return userRoles.map(userRole => userRole.role.name);
+    return userRoles.map((userRole: any) => userRole.role.name);
   } catch (error) {
     logger.error({
       error: error instanceof Error ? error.message : 'Unknown error',

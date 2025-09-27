@@ -18,11 +18,19 @@ The API uses JWT (JSON Web Tokens) for authentication. Include the access token 
 Authorization: Bearer <access_token>
 ```
 
-For tenant-specific operations, include the project ID in the header:
+For tenant-specific operations, you can identify the project in two ways:
 
+### 1. Using X-Project-ID Header
 ```
 X-Project-ID: <project_id>
 ```
+
+### 2. Using Custom Domain
+```
+Host: your-custom-domain.com
+```
+
+The system automatically detects the project based on the request domain. If no domain match is found, it falls back to the `X-Project-ID` header.
 
 ## Response Format
 
@@ -271,6 +279,7 @@ Authorization: Bearer <access_token>
 {
   "name": "My Company",
   "slug": "my-company",
+  "domain": "mycompany.com",
   "dbConnectionString": "postgresql://user:pass@host:5432/db",
   "s3Bucket": "my-company-bucket",
   "s3Endpoint": "https://s3.amazonaws.com",
@@ -811,11 +820,20 @@ curl -X POST http://localhost:3000/auth/login \
 curl -X GET http://localhost:3000/auth/me \
   -H "Authorization: Bearer <access_token>"
 
-# Create project
+# Create project with domain
 curl -X POST http://localhost:3000/tenants \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
-  -d '{"name":"My Company","slug":"my-company",...}'
+  -d '{"name":"My Company","slug":"my-company","domain":"mycompany.com",...}'
+
+# Access via custom domain
+curl -X GET https://mycompany.com/iam/users \
+  -H "Authorization: Bearer <access_token>"
+
+# Access via X-Project-ID header (fallback)
+curl -X GET http://localhost:3000/iam/users \
+  -H "Authorization: Bearer <access_token>" \
+  -H "X-Project-ID: project_123"
 ```
 
 ## Webhooks

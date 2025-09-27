@@ -85,10 +85,12 @@ router.post('/plans', authenticateToken, requireTenant, can('create:billing'), a
   });
 
   if (existingPlan) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Plan with this name already exists',
     });
+
+    return;
   }
 
   // Create plan
@@ -125,10 +127,12 @@ router.put('/plans/:id', authenticateToken, requireTenant, can('update:billing')
   });
 
   if (!existingPlan) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Plan not found',
     });
+
+    return;
   }
 
   // Update plan
@@ -167,10 +171,12 @@ router.get('/subscription', authenticateToken, requireTenant, can('read:billing'
   });
 
   if (!subscription) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'No active subscription found',
     });
+
+    return;
   }
 
   res.json({
@@ -194,10 +200,12 @@ router.post('/subscribe', authenticateToken, requireTenant, can('create:billing'
   });
 
   if (!plan) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Plan not found',
     });
+
+    return;
   }
 
   // Check if user already has an active subscription
@@ -206,21 +214,25 @@ router.post('/subscribe', authenticateToken, requireTenant, can('create:billing'
   });
 
   if (existingSubscription) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'User already has an active subscription',
     });
+
+    return;
   }
 
   // Create subscription through payment provider
   const result = await billingService.createSubscription(planId, req.user!.id, provider);
 
   if (!result.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Failed to create subscription',
       error: result.error,
     });
+
+    return;
   }
 
   // Create subscription record in database
@@ -271,10 +283,12 @@ router.put('/subscription/:id', authenticateToken, requireTenant, can('update:bi
   });
 
   if (!existingSubscription) {
-    return res.status(404).json({
+       res.status(404).json({
       success: false,
       message: 'Subscription not found',
     });
+
+    return;
   }
 
   // Check if new plan exists
@@ -283,21 +297,25 @@ router.put('/subscription/:id', authenticateToken, requireTenant, can('update:bi
   });
 
   if (!plan) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Plan not found',
     });
+
+    return;
   }
 
   // Update subscription through payment provider
   const result = await billingService.updateSubscription(id, planId, provider);
 
   if (!result.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Failed to update subscription',
       error: result.error,
     });
+
+    return;
   }
 
   // Update subscription record in database
@@ -342,21 +360,25 @@ router.delete('/subscription/:id', authenticateToken, requireTenant, can('update
   });
 
   if (!existingSubscription) {
-    return res.status(404).json({
+     res.status(404).json({
       success: false,
       message: 'Subscription not found',
     });
+
+    return;
   }
 
   // Cancel subscription through payment provider
   const result = await billingService.cancelSubscription(id, provider);
 
   if (!result.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Failed to cancel subscription',
       error: result.error,
     });
+
+    return;
   }
 
   // Update subscription record in database
@@ -397,11 +419,13 @@ router.post('/payment', authenticateToken, requireTenant, can('create:billing'),
   const result = await billingService.processPayment(amount, currency, req.user!.id, provider);
 
   if (!result.success) {
-    return res.status(400).json({
+     res.status(400).json({
       success: false,
       message: 'Payment processing failed',
       error: result.error,
     });
+
+    return;
   }
 
   logger.info({
@@ -439,10 +463,12 @@ router.get('/usage', authenticateToken, requireTenant, can('read:billing'), asyn
   });
 
   if (!subscription) {
-    return res.status(404).json({
+   res.status(404).json({
       success: false,
       message: 'No active subscription found',
     });
+
+    return;
   }
 
   // Get usage statistics (placeholder - in production, this would calculate actual usage)
