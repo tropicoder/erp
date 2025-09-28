@@ -120,6 +120,14 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.TenantUserScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  isActive: 'isActive',
+  joinedAt: 'joinedAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.RoleScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -146,7 +154,7 @@ exports.Prisma.RolePermissionScalarFieldEnum = {
 
 exports.Prisma.UserRoleScalarFieldEnum = {
   id: 'id',
-  userId: 'userId',
+  tenantUserId: 'tenantUserId',
   roleId: 'roleId'
 };
 
@@ -162,7 +170,7 @@ exports.Prisma.GroupScalarFieldEnum = {
 
 exports.Prisma.UserGroupScalarFieldEnum = {
   id: 'id',
-  userId: 'userId',
+  tenantUserId: 'tenantUserId',
   groupId: 'groupId'
 };
 
@@ -239,6 +247,7 @@ exports.NotificationStatus = exports.$Enums.NotificationStatus = {
 };
 
 exports.Prisma.ModelName = {
+  TenantUser: 'TenantUser',
   Role: 'Role',
   Permission: 'Permission',
   RolePermission: 'RolePermission',

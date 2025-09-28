@@ -6,6 +6,7 @@ A modern, headless, API-first ERP system built with Express.js and TypeScript. N
 
 ### Core Capabilities
 - **Multi-Tenant Architecture**: Complete data isolation with dedicated databases and storage per tenant
+- **Optimized User Management**: No data duplication - users stored centrally, referenced by tenants
 - **Identity & Access Management**: Role-based permissions with granular access control
 - **Authentication & Authorization**: JWT-based authentication with refresh tokens
 - **Event-Driven Architecture**: In-memory event bus for inter-module communication
@@ -196,11 +197,39 @@ X-Project-ID: {projectId}
 
 ### Identity & Access Management
 
-#### Get Users
+#### Get Users (with Tenant Data)
 ```http
 GET /iam/users
 Authorization: Bearer your-access-token
 X-Project-ID: {projectId}
+```
+
+**Response includes combined main database user data + tenant-specific data:**
+```json
+{
+  "success": true,
+  "data": {
+    "users": [
+      {
+        "id": "user_123",
+        "email": "user@example.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "avatar": null,
+        "isActive": true,
+        "createdAt": "2023-12-01T10:00:00.000Z",
+        "updatedAt": "2023-12-01T10:00:00.000Z",
+        "tenantUser": {
+          "id": "tenant_user_456",
+          "isActive": true,
+          "joinedAt": "2023-12-01T10:00:00.000Z",
+          "roles": [...],
+          "groups": [...]
+        }
+      }
+    ]
+  }
+}
 ```
 
 #### Create Role
@@ -367,13 +396,27 @@ src/
 
 ### Multi-Tenancy Architecture
 
-Nexus uses a **resource-per-tenant** strategy:
+Nexus uses a **resource-per-tenant** strategy with **optimized user management**:
 
 1. **Main Database**: Stores users, projects, and global configuration
 2. **Tenant Databases**: Each tenant has a dedicated PostgreSQL database
 3. **Tenant Storage**: Each tenant has dedicated S3-compatible storage
 4. **Dynamic Clients**: Prisma and S3 clients are created dynamically per request
 5. **Domain-Based Access**: Tenants can be accessed via custom domains or X-Project-ID header
+6. **User Architecture**: No data duplication - users stored in main database, tenant databases reference users
+7. **Cross-Tenant Users**: Users can belong to multiple tenants without data duplication
+
+### User Architecture Philosophy
+
+Nexus implements an **optimized user management system** that eliminates data duplication:
+
+1. **Single Source of Truth**: User data stored only in main database
+2. **Tenant References**: Tenant databases reference main database users via `TenantUser` model
+3. **No Data Duplication**: User information not duplicated across databases
+4. **Cross-Tenant Support**: Users can belong to multiple tenants without duplication
+5. **Combined Data Retrieval**: `TenantUserService` provides unified user + tenant data
+6. **Automatic Migration**: Tenant database migration system handles schema updates
+7. **Data Integrity**: No sync issues between databases
 
 ### Core-Based Billing Philosophy
 
@@ -381,10 +424,22 @@ Nexus implements a **centralized billing model** where billing is managed at the
 
 1. **User-Based Pricing**: $10.00 per active user per month
 2. **Application-Based Pricing**: Variable pricing per application (0 to unlimited)
-3. **Prorated Billing**: New users are billed prorated for remaining days in the month
+3. **Monthly Billing**: Users pay full monthly price regardless of when added
 4. **Automatic Billing**: Monthly billing on the last day of each month
 5. **Automatic Enforcement**: Tenants are automatically deactivated for non-payment
 6. **Centralized Management**: All billing data stored in main database
+
+### User Architecture Benefits
+
+The optimized user management system provides several key advantages:
+
+- **No Data Duplication**: User information stored once in main database
+- **Data Consistency**: No sync issues between databases
+- **Cross-Tenant Users**: Users can belong to multiple tenants seamlessly
+- **Efficient Storage**: Reduced storage requirements and costs
+- **Simplified Maintenance**: User updates only need to be made in one place
+- **Better Performance**: Faster queries without duplicate data processing
+- **Data Integrity**: Single source of truth for user identity
 
 ### Event-Driven Architecture
 
@@ -570,6 +625,12 @@ For support and questions:
 - [Billing Philosophy](docs/BILLING_PHILOSOPHY.md) - Core-based billing system
 
 ## 🗺️ Roadmap
+
+### Recently Completed
+- [x] **User Architecture Optimization**: Eliminated data duplication with TenantUser reference model
+- [x] **Migration System**: Automatic tenant database migration and data migration
+- [x] **Combined Data Retrieval**: TenantUserService for unified user + tenant data
+- [x] **Cross-Tenant Support**: Users can belong to multiple tenants without duplication
 
 ### Planned Features
 - [ ] Real-time notifications with WebSockets

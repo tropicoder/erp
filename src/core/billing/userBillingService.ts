@@ -100,7 +100,7 @@ export class UserBillingService {
       }
 
       const tenantClient = getTenantClient(project.dbConnectionString);
-      const userCount = await tenantClient.user.count({
+      const userCount = await tenantClient.tenantUser.count({
         where: { isActive: true },
       });
 

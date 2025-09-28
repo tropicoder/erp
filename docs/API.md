@@ -307,10 +307,51 @@ Authorization: Bearer <access_token>
 }
 ```
 
+#### POST /tenants/:id/members
+Add user to project with member role (tenant creator/admin only).
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Request Body:**
+```json
+{
+  "userId": "user_123",
+  "email": "user@example.com",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Member added to project successfully",
+  "data": {
+    "userProject": {
+      "id": "user_project_123",
+      "userId": "user_123",
+      "projectId": "project_123",
+      "role": "member",
+      "joinedAt": "2023-12-01T10:00:00.000Z",
+      "user": {
+        "id": "user_123",
+        "email": "user@example.com",
+        "firstName": "John",
+        "lastName": "Doe"
+      }
+    }
+  }
+}
+```
+
 ### Identity & Access Management
 
 #### GET /iam/users
-Get all users in the tenant.
+Get all users in the tenant with combined main database and tenant-specific data.
 
 **Headers:**
 ```
@@ -334,20 +375,40 @@ X-Project-ID: <project_id>
         "email": "user@example.com",
         "firstName": "John",
         "lastName": "Doe",
+        "avatar": null,
         "isActive": true,
         "createdAt": "2023-12-01T10:00:00.000Z",
-        "roles": [
-          {
-            "id": "user_role_123",
-            "roleId": "role_123",
-            "role": {
+        "updatedAt": "2023-12-01T10:00:00.000Z",
+        "tenantUser": {
+          "id": "tenant_user_456",
+          "isActive": true,
+          "joinedAt": "2023-12-01T10:00:00.000Z",
+          "updatedAt": "2023-12-01T10:00:00.000Z",
+          "roles": [
+            {
               "id": "role_123",
               "name": "admin",
-              "description": "Administrator role"
+              "description": "Administrator role",
+              "permissions": [
+                {
+                  "id": "perm_123",
+                  "name": "create:users",
+                  "description": "Create users",
+                  "resource": "users",
+                  "action": "create"
+                }
+              ]
             }
-          }
-        ],
-        "groups": []
+          ],
+          "groups": [
+            {
+              "id": "group_123",
+              "name": "Administrators",
+              "description": "System administrators",
+              "isActive": true
+            }
+          ]
+        }
       }
     ],
     "pagination": {
@@ -403,6 +464,64 @@ X-Project-ID: <project_id>
           }
         }
       ]
+    }
+  }
+}
+```
+
+#### GET /iam/users/:id
+Get a specific user with tenant data.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+X-Project-ID: <project_id>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "id": "user_123",
+      "email": "user@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "avatar": null,
+      "isActive": true,
+      "createdAt": "2023-12-01T10:00:00.000Z",
+      "updatedAt": "2023-12-01T10:00:00.000Z",
+      "tenantUser": {
+        "id": "tenant_user_456",
+        "isActive": true,
+        "joinedAt": "2023-12-01T10:00:00.000Z",
+        "updatedAt": "2023-12-01T10:00:00.000Z",
+        "roles": [
+          {
+            "id": "role_123",
+            "name": "admin",
+            "description": "Administrator role",
+            "permissions": [
+              {
+                "id": "perm_123",
+                "name": "create:users",
+                "description": "Create users",
+                "resource": "users",
+                "action": "create"
+              }
+            ]
+          }
+        ],
+        "groups": [
+          {
+            "id": "group_123",
+            "name": "Administrators",
+            "description": "System administrators",
+            "isActive": true
+          }
+        ]
+      }
     }
   }
 }

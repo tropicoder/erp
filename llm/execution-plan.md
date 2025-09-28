@@ -68,6 +68,8 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 - [x] Add `ApiCallLog` model for LLM tracking
 - [x] Set up proper relationships and indexes
 - [x] **Note**: Billing models moved to main database (core-based billing)
+- [x] **User Architecture**: Replaced duplicate `User` model with `TenantUser` reference model
+- [x] **No Data Duplication**: User data stored only in main database, tenant database references users
 
 ---
 
@@ -161,6 +163,11 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 - [x] **Domain Normalization**: Create domain utilities for processing
 - [x] **Domain Search**: Include domain in tenant search functionality
 - [x] Implement automatic subscription creation
+- [x] **Tenant Initialization**: Automatic admin role and permissions setup
+- [x] **Member Management**: Route for adding users with member role
+- [x] **User Architecture**: Implement TenantUserService for combined user data retrieval
+- [x] **Migration Service**: Create tenant database migration system
+- [x] **No Duplication**: Eliminated duplicate user data across databases
 
 ### 5.2 Tenant API Endpoints
 - [x] `GET /tenants` - List tenants (admin only)
@@ -169,9 +176,12 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 - [x] `DELETE /tenants/:id` - Delete tenant
 - [x] `GET /tenants/:id` - Get tenant details
 - [x] `POST /tenants/:id/users` - Add user to tenant (with automatic billing)
+- [x] `POST /tenants/:id/members` - Add user with member role (admin only)
 - [x] `GET /tenants/:id/users` - Get tenant users
 - [x] **Domain Support**: All endpoints support domain-based access
 - [x] **Domain Validation**: Domain format validation in create/update operations
+- [x] **Combined User Data**: User endpoints return main database + tenant-specific data
+- [x] **TenantUserService Integration**: All user operations use TenantUserService
 
 ### 5.3 Dynamic Client Management
 - [x] Implement Prisma client factory
@@ -398,6 +408,14 @@ Building a modern, headless, API-first ERP system called **Nexus** using Express
 - **Automatic billing processing** when users are added
 - **Comprehensive billing events** and logging
 - **Billing automation services** with cron jobs
+
+### ✅ **User Architecture Optimization**
+- **No Data Duplication**: User data stored only in main database
+- **TenantUser Reference Model**: Tenant database references main database users
+- **Combined Data Retrieval**: TenantUserService provides unified user data
+- **Migration System**: Automatic tenant database migration and data migration
+- **Cross-Tenant Users**: Users can belong to multiple tenants without duplication
+- **Single Source of Truth**: User identity managed centrally
 
 ## Notes
 - Each phase should be completed and tested before moving to the next

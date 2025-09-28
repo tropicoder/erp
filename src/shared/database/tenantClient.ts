@@ -1,4 +1,4 @@
-import { PrismaClient as TenantPrismaClient } from '../generated/tenant-client';
+import { PrismaClient as TenantPrismaClient } from '../generated/tenant-client/index';
 import { config } from '../../config/config';
 
 // Cache for tenant-specific Prisma clients

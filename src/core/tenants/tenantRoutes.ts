@@ -8,7 +8,10 @@ import { normalizeDomain, isValidDomain } from '../../shared/utils/domainUtils';
 import { eventBus, EventNames } from '../event-bus';
 import { coreBillingService } from '../billing/coreBillingService';
 import { userBillingService } from '../billing/userBillingService';
+import { tenantInitializationService } from './tenantInitializationService';
+import { tenantUserService } from './tenantUserService';
 import pino from 'pino';
+import { config } from '../../config/config';
 
 const logger = pino();
 const router = Router();
@@ -199,8 +202,8 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
     const subscription = await coreBillingService.createSubscription(
       project.id,
       req.user!.id,
-      10.00, // Default user price per month
-      0.00   // Default application price per month
+      config.userMonthlyPrice, // Default user price per month
+      config.applicationMonthlyPrice   // Default application price per month
     );
 
     logger.info({
@@ -212,6 +215,26 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
       projectId: project.id,
       error: error instanceof Error ? error.message : 'Unknown error',
     }, 'Failed to create default subscription');
+  }
+
+  // Initialize tenant with default roles, permissions, and admin user
+  try {
+    await tenantInitializationService.initializeTenant(
+      project.id,
+      req.user!.id,
+      req.user!.email
+    );
+
+    logger.info({
+      projectId: project.id,
+      creatorUserId: req.user!.id,
+    }, 'Tenant initialized with admin role and permissions');
+  } catch (error) {
+    logger.error({
+      projectId: project.id,
+      creatorUserId: req.user!.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Failed to initialize tenant - project created but tenant setup failed');
   }
 
   // Publish event
@@ -242,8 +265,6 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
       },
     },
   });
-
-  //intialize tenant here ?
 
 }));
 
@@ -585,6 +606,115 @@ router.post('/:id/users', authenticateToken, asyncHandler(async (req: Request, r
   res.status(201).json({
     success: true,
     message: 'User added to project successfully',
+    data: { userProject: newUserProject },
+  });
+}));
+
+/**
+ * POST /tenants/:id/members
+ * Add user to tenant with member role (tenant creator only)
+ */
+router.post('/:id/members', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  const { id: projectId } = req.params;
+  const { userId, email, firstName, lastName } = req.body;
+
+  const mainClient = getMainClient();
+
+  // Check if user is the creator/admin of this project
+  const userProject = await mainClient.userProject.findFirst({
+    where: {
+      userId: req.user!.id,
+      projectId,
+      role: 'admin', // Only admins can add members
+    },
+  });
+
+  if (!userProject) {
+    res.status(403).json({
+      success: false,
+      message: 'Only project admins can add members',
+    });
+    return;
+  }
+
+  // Check if user already exists in project
+  const existingUserProject = await mainClient.userProject.findFirst({
+    where: {
+      userId,
+      projectId,
+    },
+  });
+
+  if (existingUserProject) {
+    res.status(400).json({
+      success: false,
+      message: 'User is already a member of this project',
+    });
+    return;
+  }
+
+  // Add user to main database project relationship
+  const newUserProject = await mainClient.userProject.create({
+    data: {
+      userId,
+      projectId,
+      role: 'member', // Always member role for this endpoint
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+    },
+  });
+
+  // Add user to tenant database
+  try {
+    await tenantUserService.addUserToTenant(projectId, userId);
+  } catch (error) {
+    logger.error({
+      projectId,
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Failed to add user to tenant database');
+
+    // Rollback main database change
+    await mainClient.userProject.delete({
+      where: { id: newUserProject.id },
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add user to tenant database',
+    });
+    return;
+  }
+
+  // Process billing for new member (will be billed next month)
+  try {
+    await userBillingService.handleUserAdded(projectId, userId);
+  } catch (error) {
+    logger.error({
+      projectId,
+      userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'Failed to process billing for new member');
+  }
+
+  logger.info({
+    projectId,
+    userId,
+    role: 'member',
+    addedBy: req.user!.id,
+  }, 'Member added to project');
+
+  res.status(201).json({
+    success: true,
+    message: 'Member added to project successfully',
     data: { userProject: newUserProject },
   });
 }));

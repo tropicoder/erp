@@ -1,5 +1,6 @@
 import { getMainClient } from '../../shared/database/mainClient';
 import { getTenantClient } from '../../shared/database/tenantClient';
+import { decrypt } from '../../shared/utils/encryption';
 import { Decimal } from '@prisma/client/runtime/library';
 import pino from 'pino';
 
@@ -90,7 +91,7 @@ export class CoreBillingService {
 
     // Get user count from tenant database
     const tenantClient = getTenantClient(project.dbConnectionString);
-    const userCount = await tenantClient.user.count({
+    const userCount = await tenantClient.tenantUser.count({
       where: { isActive: true },
     });
 
@@ -344,9 +345,12 @@ export class CoreBillingService {
       },
     });
 
-    const tenantClient = getTenantClient(project!.dbConnectionString);
-    const userCount = await tenantClient.user.count({
-      where: { isActive: true },
+    //const decryptedConnectionString = decrypt(project!.dbConnectionString);
+    //const tenantClient = getTenantClient(decryptedConnectionString);
+    const userCount = await this.mainClient.userProject.count({
+      where: {
+        projectId,
+      },
     });
 
     return {

@@ -191,6 +191,9 @@ export const EventNames = {
   BILLING_PRORATED_INVOICE_GENERATED: 'billing.prorated.invoice.generated',
   BILLING_APPLICATION_INVOICE_GENERATED: 'billing.application.invoice.generated',
   BILLING_PROJECT_DEACTIVATED: 'billing.project.deactivated',
+
+  // Tenant events
+  TENANT_INITIALIZED: 'tenant.initialized',
   
   // System events
   SYSTEM_STARTUP: 'system.startup',

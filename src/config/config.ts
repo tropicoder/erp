@@ -15,6 +15,7 @@ export const config = {
 
   // Database configuration
   databaseUrl: process.env.DATABASE_URL || '',
+  tenantDatabaseUrl: process.env.TENANT_DATABASE_URL || '',
   // supabaseUrl: process.env.SUPABASE_URL || '',
   // supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
   // supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
@@ -41,6 +42,10 @@ export const config = {
 
   // CORS
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+
+  // Pricing
+  userMonthlyPrice: parseFloat(process.env.USER_MONTHLY_PRICE || '10.00'),
+  applicationMonthlyPrice: parseFloat(process.env.APPLICATION_MONTHLY_PRICE || '0.00'),
 };
 
 // Validate required environment variables

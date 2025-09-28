@@ -1,7 +1,3 @@
-// Tenant-specific database schema
-// This schema is used for each tenant's dedicated database
-// Run : npx prisma migrate dev --schema=prisma/tenant-schema.prisma
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/shared/generated/tenant-client"
@@ -12,20 +8,27 @@ datasource db {
   url      = env("TENANT_DATABASE_URL")
 }
 
-// ============================================
-// TENANT DATABASE SCHEMA
-// ============================================
+// Note: User data is stored in the main database
+// This model represents tenant-specific user information and relationships
+model TenantUser {
+  id        String      @id @default(cuid())
+  userId    String      @unique // Reference to main database user ID
+  isActive  Boolean     @default(true)
+  joinedAt  DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  groups    UserGroup[]
+  roles     UserRole[]
 
-// Role-based access control
+  @@map("tenant_users")
+}
+
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   permissions RolePermission[]
   users       UserRole[]
 
@@ -33,86 +36,73 @@ model Role {
 }
 
 model Permission {
-  id          String   @id @default(cuid())
-  name        String   @unique // e.g., "create:invoice", "read:document"
+  id          String           @id @default(cuid())
+  name        String           @unique
   description String?
-  resource    String // e.g., "invoice", "document"
-  action      String // e.g., "create", "read", "update", "delete"
-  createdAt   DateTime @default(now())
-
-  // Relations
-  roles RolePermission[]
+  resource    String
+  action      String
+  createdAt   DateTime         @default(now())
+  roles       RolePermission[]
 
   @@unique([resource, action])
   @@map("permissions")
 }
 
 model RolePermission {
-  id           String @id @default(cuid())
+  id           String     @id @default(cuid())
   roleId       String
   permissionId String
-
-  // Relations
-  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
 }
 
 model UserRole {
-  id     String @id @default(cuid())
-  userId String
-  roleId String
+  id           String     @id @default(cuid())
+  tenantUserId String
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
 
-  // Relations
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, roleId])
+  @@unique([tenantUserId, roleId])
   @@map("user_roles")
 }
 
-// Group management with hierarchy support
 model Group {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   description String?
-  parentId    String? // Self-referencing for hierarchy
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  parent   Group?      @relation("GroupHierarchy", fields: [parentId], references: [id])
-  children Group[]     @relation("GroupHierarchy")
-  users    UserGroup[]
+  parentId    String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  parent      Group?      @relation("GroupHierarchy", fields: [parentId], references: [id])
+  children    Group[]     @relation("GroupHierarchy")
+  users       UserGroup[]
 
   @@map("groups")
 }
 
 model UserGroup {
-  id      String @id @default(cuid())
-  userId  String
-  groupId String
+  id           String     @id @default(cuid())
+  tenantUserId String
+  groupId      String
+  group        Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
 
-  // Relations
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, groupId])
+  @@unique([tenantUserId, groupId])
   @@map("user_groups")
 }
 
-// Note: Billing and subscription management has been moved to the main database
-// All billing-related models (Plan, Subscription) are now in the main schema
-
-// API call logging for LLM usage tracking
 model ApiCallLog {
   id           String   @id @default(cuid())
-  provider     String // openai, anthropic, nexus
+  provider     String
   endpoint     String
   tokensUsed   Int
   cost         Decimal? @db.Decimal(10, 4)
-  responseTime Int // in milliseconds
+  responseTime Int
   success      Boolean
   errorMessage String?
   createdAt    DateTime @default(now())
@@ -120,42 +110,36 @@ model ApiCallLog {
   @@map("api_call_logs")
 }
 
-// Notification templates and history
 model NotificationTemplate {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  type      String // email, sms, push
-  subject   String?
-  body      String
-  variables Json // JSON object with template variables
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
+  id            String         @id @default(cuid())
+  name          String         @unique
+  type          String
+  subject       String?
+  body          String
+  variables     Json
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
   notifications Notification[]
 
   @@map("notification_templates")
 }
 
 model Notification {
-  id           String             @id @default(cuid())
+  id           String               @id @default(cuid())
   templateId   String
-  recipient    String // email, phone, user ID
-  type         String // email, sms, push
-  status       NotificationStatus @default(PENDING)
+  recipient    String
+  type         String
+  status       NotificationStatus   @default(PENDING)
   sentAt       DateTime?
   errorMessage String?
-  metadata     Json? // Additional data
-  createdAt    DateTime           @default(now())
-
-  // Relations
-  template NotificationTemplate @relation(fields: [templateId], references: [id])
+  metadata     Json?
+  createdAt    DateTime             @default(now())
+  template     NotificationTemplate @relation(fields: [templateId], references: [id])
 
   @@map("notifications")
 }
 
-// Enums
 enum NotificationStatus {
   PENDING
   SENT
